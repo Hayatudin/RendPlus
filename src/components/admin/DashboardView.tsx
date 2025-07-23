@@ -13,10 +13,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { 
   Users, 
-  FileText, 
+  Calculator, 
   User, 
   RefreshCw,
-  AlertCircle 
+  AlertCircle,
+  Target
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -84,6 +85,28 @@ export function DashboardView() {
 
       if (error) throw error;
       return data || [];
+    }
+  });
+
+  const { data: totalQuotes, isLoading: isLoadingQuotes } = useQuery({
+    queryKey: ['total-quotes'],
+    queryFn: async () => {
+      // Count unique quote submissions by grouping files by quote_id or uploaded_by
+      const { data, error } = await supabase
+        .from('quote_files')
+        .select('uploaded_by, quote_id, created_at')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      // Group by user to count unique quote submissions
+      const uniqueQuotes = new Set();
+      data?.forEach(file => {
+        const identifier = file.quote_id || `${file.uploaded_by}_${new Date(file.created_at).toDateString()}`;
+        uniqueQuotes.add(identifier);
+      });
+      
+      return uniqueQuotes.size;
     }
   });
 
@@ -161,13 +184,13 @@ export function DashboardView() {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recent Files</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Quotes</CardTitle>
+            <Calculator className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{recentFiles?.length || 0}</div>
+            <div className="text-2xl font-bold">{totalQuotes || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Files uploaded via quotes
+              Total quote submissions
             </p>
           </CardContent>
         </Card>
@@ -266,7 +289,7 @@ export function DashboardView() {
             </Table>
           ) : (
             <div className="flex flex-col items-center justify-center p-8 text-center">
-              <FileText className="h-10 w-10 text-muted-foreground mb-4" />
+              <Target className="h-10 w-10 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">No files uploaded</h3>
               <p className="text-sm text-muted-foreground mt-2">
                 No files have been uploaded through the quote form yet.
