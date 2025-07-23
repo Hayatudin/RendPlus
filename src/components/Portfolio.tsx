@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import PortfolioItem, { Category, WorkItem } from "./PortfolioItem";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FilterButtonProps {
   category: Category;
@@ -11,64 +13,6 @@ interface FilterButtonProps {
   onClick: () => void;
   children: React.ReactNode;
 }
-
-const portfolioData: WorkItem[] = [
-  {
-    id: "1",
-    title: "Urban Planning Development",
-    category: "residential",
-    image: "/lovable-uploads/6dc34976-ef88-4e06-9947-78dce20764db.png",
-    description: "Aerial view of modern residential complex with integrated green spaces and innovative architectural layout.",
-    client: "Urban Development Corp.",
-    year: "2023",
-    featured: true
-  },
-  {
-    id: "2",
-    title: "Modern High-Rise Building",
-    category: "commercial",
-    image: "/lovable-uploads/8044b024-7567-4f72-b742-392ce40e1a38.png",
-    description: "Contemporary high-rise commercial tower with curved glass façade and dramatic night lighting.",
-    client: "Metropolitan Developers",
-    year: "2023"
-  },
-  {
-    id: "3",
-    title: "Minimalist Home Design",
-    category: "residential",
-    image: "/lovable-uploads/929ec1c4-ceed-4675-ac29-311927eb3514.png",
-    description: "Contemporary mini villa with clean lines, open concept design, and indoor-outdoor living spaces.",
-    client: "Modern Living LLC",
-    year: "2022"
-  },
-  {
-    id: "4",
-    title: "Executive Office Design",
-    category: "interior",
-    image: "/lovable-uploads/73bb5abc-1f7e-49f1-b68d-aa9857daf3d4.png",
-    description: "Elegant office interior with wooden accents, integrated lighting, and functional workspace design.",
-    client: "Corporate Solutions Inc.",
-    year: "2022"
-  },
-  {
-    id: "5",
-    title: "Luxury Living Space",
-    category: "interior",
-    image: "/lovable-uploads/bdf482ec-17f3-44f0-9a58-4b7857c4fe15.png",
-    description: "High-end living room with sleek minimalist design, custom lighting, and premium finishes.",
-    client: "Prestige Interiors",
-    year: "2023"
-  },
-  {
-    id: "6",
-    title: "Architectural Visualization",
-    category: "commercial",
-    image: "/lovable-uploads/5fc029a7-8d14-4f83-8673-13934f353824.png",
-    description: "3D visualization of architectural planning and development with detailed floor plans and site context.",
-    client: "Design Vision Partners",
-    year: "2022"
-  }
-];
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -84,9 +28,38 @@ const Portfolio = () => {
   const [filter, setFilter] = useState<Category>("all");
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
-  const filteredItems = filter === "all" 
-    ? portfolioData 
-    : portfolioData.filter(item => item.category === filter);
+  // Fetch portfolios from Supabase
+  const { data: portfolios, isLoading } = useQuery({
+    queryKey: ['portfolios-public'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('portfolios')
+        .select('*')
+        .eq('status', 'Active')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching portfolios:", error);
+        throw error;
+      }
+      
+      // Transform the data to match WorkItem interface
+      return data.map(portfolio => ({
+        id: portfolio.id,
+        title: portfolio.title,
+        category: portfolio.category as Category,
+        description: portfolio.description,
+        client: portfolio.client,
+        image: portfolio.image_url,
+        year: portfolio.year,
+        featured: portfolio.featured
+      })) as WorkItem[];
+    }
+  });
+
+  const filteredItems = portfolios ? (filter === "all" 
+    ? portfolios 
+    : portfolios.filter(item => item.category === filter)) : [];
 
   return (
     <section id="portfolio" className="py-20 bg-white">
@@ -146,22 +119,29 @@ const Portfolio = () => {
         </div>
 
         {/* Portfolio Grid */}
-        <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          {filteredItems.map((item) => (
-            <PortfolioItem
-              key={item.id}
-              item={item}
-              isHovered={hoveredItem === item.id}
-              onMouseEnter={() => setHoveredItem(item.id)}
-              onMouseLeave={() => setHoveredItem(null)}
-            />
-          ))}
-        </motion.div>
+        {isLoading ? (
+          <div className="text-center py-12 space-y-4">
+            <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
+            <p className="text-muted-foreground">Loading portfolio...</p>
+          </div>
+        ) : (
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {filteredItems.map((item) => (
+              <PortfolioItem
+                key={item.id}
+                item={item}
+                isHovered={hoveredItem === item.id}
+                onMouseEnter={() => setHoveredItem(item.id)}
+                onMouseLeave={() => setHoveredItem(null)}
+              />
+            ))}
+          </motion.div>
+        )}
 
         <div className="text-center mt-12">
           <Button 
