@@ -1,4 +1,3 @@
-
 import { ArrowUpRight, ArrowRight, Filter, Sparkles, Award, Layers } from "lucide-react";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,6 +11,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 type SortOption = "newest" | "oldest" | "featured";
 
@@ -132,15 +133,51 @@ const PortfolioPage = () => {
   const [filter, setFilter] = useState<Category>("all");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
 
+  // Fetch portfolios from Supabase
+  const { data: portfolios, isLoading } = useQuery({
+    queryKey: ['portfolios-page'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('portfolios')
+        .select('*')
+        .eq('status', 'Active')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching portfolios:", error);
+        throw error;
+      }
+      
+      // Transform the data to match WorkItem interface
+      return data.map(portfolio => ({
+        id: portfolio.id,
+        title: portfolio.title,
+        category: portfolio.category as Category,
+        description: portfolio.description,
+        client: portfolio.client,
+        image: portfolio.image_url,
+        year: portfolio.year,
+        featured: portfolio.featured
+      })) as WorkItem[];
+    }
+  });
+
   // Filter and sort items
-  const filteredItems = workItems
+  const filteredItems = portfolios ? portfolios
     .filter(item => filter === "all" ? true : item.category === filter)
     .sort((a, b) => {
       if (sortBy === "newest") return a.year > b.year ? -1 : 1;
       if (sortBy === "oldest") return a.year < b.year ? -1 : 1;
       if (sortBy === "featured") return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
       return 0;
-    });
+    }) : [];
+
+  // Extract the portfolio items by category
+  const interiorItems = portfolios ? portfolios.filter(item => item.category === "interior") : [];
+  const residentialItems = portfolios ? portfolios.filter(item => item.category === "residential") : [];
+  const commercialItems = portfolios ? portfolios.filter(item => item.category === "commercial") : [];
+  const culturalItems = portfolios ? portfolios.filter(item => item.category === "cultural") : [];
+  const luxuryItems = portfolios ? portfolios.filter(item => item.category === "luxury") : [];
 
   return (
     <div className="bg-white">
@@ -276,27 +313,69 @@ const PortfolioPage = () => {
 
             {/* Content for each tab */}
             <TabsContent value="all" className="mt-8">
-              <PortfolioGrid items={filteredItems} />
+              {isLoading ? (
+                <div className="text-center py-12 space-y-4">
+                  <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
+                  <p className="text-muted-foreground">Loading portfolio...</p>
+                </div>
+              ) : (
+                <PortfolioGrid items={filteredItems} />
+              )}
             </TabsContent>
 
             <TabsContent value="interior" className="mt-8">
-              <PortfolioGrid items={interiorItems} />
+              {isLoading ? (
+                <div className="text-center py-12 space-y-4">
+                  <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
+                  <p className="text-muted-foreground">Loading portfolio...</p>
+                </div>
+              ) : (
+                <PortfolioGrid items={interiorItems} />
+              )}
             </TabsContent>
 
             <TabsContent value="residential" className="mt-8">
-              <PortfolioGrid items={residentialItems} />
+              {isLoading ? (
+                <div className="text-center py-12 space-y-4">
+                  <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
+                  <p className="text-muted-foreground">Loading portfolio...</p>
+                </div>
+              ) : (
+                <PortfolioGrid items={residentialItems} />
+              )}
             </TabsContent>
 
             <TabsContent value="commercial" className="mt-8">
-              <PortfolioGrid items={commercialItems} />
+              {isLoading ? (
+                <div className="text-center py-12 space-y-4">
+                  <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
+                  <p className="text-muted-foreground">Loading portfolio...</p>
+                </div>
+              ) : (
+                <PortfolioGrid items={commercialItems} />
+              )}
             </TabsContent>
 
             <TabsContent value="cultural" className="mt-8">
-              <PortfolioGrid items={culturalItems} />
+              {isLoading ? (
+                <div className="text-center py-12 space-y-4">
+                  <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
+                  <p className="text-muted-foreground">Loading portfolio...</p>
+                </div>
+              ) : (
+                <PortfolioGrid items={culturalItems} />
+              )}
             </TabsContent>
 
             <TabsContent value="luxury" className="mt-8">
-              <PortfolioGrid items={luxuryItems} />
+              {isLoading ? (
+                <div className="text-center py-12 space-y-4">
+                  <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
+                  <p className="text-muted-foreground">Loading portfolio...</p>
+                </div>
+              ) : (
+                <PortfolioGrid items={luxuryItems} />
+              )}
             </TabsContent>
           </Tabs>
 

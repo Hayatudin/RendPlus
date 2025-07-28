@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
 
 const Hero = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const { user } = useAuth();
   
   const slides = [
     {
@@ -63,7 +65,7 @@ const Hero = () => {
           <p className="text-base md:text-lg mb-6 text-gray-200">
             Transform your architectural concepts into stunning visual experiences with our expert 3D rendering services.
           </p>
-          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+          <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 items-start">
             <Button 
               asChild
               size="lg" 
